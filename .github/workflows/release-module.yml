@@ -1,32 +1,52 @@
 name: Release module
 
-# Tag convention: "<ModuleFolder>-v<version>" e.g. "Race_Creator-v0.1.0".
-# The part before "-v" must match a top-level folder in this repo containing
-# that module's module.json. Pushing a matching tag zips the module folder
-# and publishes a GitHub Release with two assets: module.json (for Foundry's
-# manifest URL) and <ModuleFolder>.zip (for the download URL).
+# Two ways to trigger a release for a module folder:
+#   1. Push a tag "<ModuleFolder>-v<version>" e.g. "Race_Creator-v0.1.0".
+#   2. Run this workflow manually (Actions tab, or the GitHub API) with the
+#      "module" and "version" inputs — useful when tag pushes aren't available.
+# Either way, "<ModuleFolder>" must match a top-level folder in this repo
+# containing that module's module.json. The result is a GitHub Release with
+# two assets: module.json (for Foundry's manifest URL) and
+# <ModuleFolder>.zip (for the download URL) — never a whole-repo zip, since
+# that would mix in other modules' files.
 
 on:
   push:
     tags:
       - "*-v*"
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Carpeta del módulo (ej. Race_Creator)"
+        required: true
+      version:
+        description: "Versión, sin la 'v' (ej. 0.1.0)"
+        required: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
-      - name: Resolve module folder from tag
+      - name: Resolve module folder and tag
         id: module
         run: |
-          TAG="${GITHUB_REF_NAME}"
-          FOLDER="${TAG%-v*}"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            FOLDER="${{ inputs.module }}"
+            TAG="${FOLDER}-v${{ inputs.version }}"
+          else
+            TAG="${GITHUB_REF_NAME}"
+            FOLDER="${TAG%-v*}"
+          fi
           if [ ! -f "$FOLDER/module.json" ]; then
-            echo "::error::No se encontró $FOLDER/module.json para el tag $TAG"
+            echo "::error::No se encontró $FOLDER/module.json para $TAG"
             exit 1
           fi
           echo "folder=$FOLDER" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build release zip
         run: |
@@ -36,7 +56,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          name: "${{ steps.module.outputs.folder }} ${{ github.ref_name }}"
+          tag_name: ${{ steps.module.outputs.tag }}
+          name: "${{ steps.module.outputs.folder }} ${{ steps.module.outputs.tag }}"
           files: |
             ${{ steps.module.outputs.folder }}.zip
             ${{ steps.module.outputs.folder }}/module.json
