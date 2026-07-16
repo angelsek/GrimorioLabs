@@ -1,0 +1,42 @@
+name: Release module
+
+# Tag convention: "<ModuleFolder>-v<version>" e.g. "Race_Creator-v0.1.0".
+# The part before "-v" must match a top-level folder in this repo containing
+# that module's module.json. Pushing a matching tag zips the module folder
+# and publishes a GitHub Release with two assets: module.json (for Foundry's
+# manifest URL) and <ModuleFolder>.zip (for the download URL).
+
+on:
+  push:
+    tags:
+      - "*-v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve module folder from tag
+        id: module
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          FOLDER="${TAG%-v*}"
+          if [ ! -f "$FOLDER/module.json" ]; then
+            echo "::error::No se encontró $FOLDER/module.json para el tag $TAG"
+            exit 1
+          fi
+          echo "folder=$FOLDER" >> "$GITHUB_OUTPUT"
+
+      - name: Build release zip
+        run: |
+          cd "${{ steps.module.outputs.folder }}"
+          zip -r "../${{ steps.module.outputs.folder }}.zip" . -x "*.DS_Store"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "${{ steps.module.outputs.folder }} ${{ github.ref_name }}"
+          files: |
+            ${{ steps.module.outputs.folder }}.zip
+            ${{ steps.module.outputs.folder }}/module.json

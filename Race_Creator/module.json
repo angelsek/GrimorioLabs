@@ -1,0 +1,38 @@
+{
+  "id": "race-creator",
+  "title": "Kuruf: Race Creator",
+  "description": "Formulario para crear ítems de tipo Raza (D&D 5e) personalizados —tamaño, tipo de criatura, movimiento, sentidos, descripción y rasgos raciales— y aplicarlos a los personajes. Parte del proyecto Kuruf de GrimorioLabs.",
+  "authors": [
+    { "name": "GrimorioLabs" }
+  ],
+  "version": "0.1.0",
+  "compatibility": {
+    "minimum": "12",
+    "verified": "13"
+  },
+  "relationships": {
+    "systems": [
+      {
+        "id": "dnd5e",
+        "type": "system",
+        "compatibility": {
+          "minimum": "3.0"
+        }
+      }
+    ]
+  },
+  "esmodules": [
+    "scripts/race-creator.mjs"
+  ],
+  "styles": [
+    "styles/race-creator.css"
+  ],
+  "languages": [
+    { "lang": "en", "name": "English", "path": "lang/en.json" },
+    { "lang": "es", "name": "Español", "path": "lang/es.json" }
+  ],
+  "url": "https://github.com/angelsek/GrimorioLabs/tree/main/Race_Creator",
+  "bugs": "https://github.com/angelsek/GrimorioLabs/issues",
+  "manifest": "https://github.com/angelsek/GrimorioLabs/releases/download/Race_Creator-v0.1.0/module.json",
+  "download": "https://github.com/angelsek/GrimorioLabs/releases/download/Race_Creator-v0.1.0/Race_Creator.zip"
+}
