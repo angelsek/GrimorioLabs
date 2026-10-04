@@ -29,17 +29,30 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # No hace git push: la Release la crea la API con GITHUB_TOKEN.
+          persist-credentials: false
 
       - name: Resolve module folder and tag
         id: module
+        # Los inputs y el nombre del tag llegan por env, nunca interpolados en el script:
+        # así un valor con comillas o $(...) no se ejecuta como código.
+        env:
+          INPUT_MODULE: ${{ inputs.module }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            FOLDER="${{ inputs.module }}"
-            TAG="${FOLDER}-v${{ inputs.version }}"
+          if [ "$GITHUB_EVENT_NAME" = "workflow_dispatch" ]; then
+            FOLDER="$INPUT_MODULE"
+            TAG="${FOLDER}-v${INPUT_VERSION}"
           else
             TAG="${GITHUB_REF_NAME}"
             FOLDER="${TAG%-v*}"
+          fi
+          # Solo nombres de carpeta y versiones simples (sin rutas ni caracteres de shell).
+          if ! [[ "$FOLDER" =~ ^[A-Za-z0-9_.-]+$ ]] || [[ "$FOLDER" == .* ]] || ! [[ "$TAG" =~ ^[A-Za-z0-9_.-]+$ ]]; then
+            echo "::error::Nombre de módulo o versión no válido: $TAG"
+            exit 1
           fi
           if [ ! -f "$FOLDER/module.json" ]; then
             echo "::error::No se encontró $FOLDER/module.json para $TAG"
@@ -49,12 +62,14 @@ jobs:
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build release zip
+        env:
+          FOLDER: ${{ steps.module.outputs.folder }}
         run: |
-          cd "${{ steps.module.outputs.folder }}"
-          zip -r "../${{ steps.module.outputs.folder }}.zip" . -x "*.DS_Store"
+          cd "$FOLDER"
+          zip -r "../$FOLDER.zip" . -x "*.DS_Store"
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.module.outputs.tag }}
           name: "${{ steps.module.outputs.folder }} ${{ steps.module.outputs.tag }}"
